@@ -6,7 +6,7 @@ Allows you to get the temperature and name of the processor, video card, etc. Th
 
 The bot sends this to the VK's private messages.
 
-# How to use it? 
+## How to use it?
 1. Open the file pcmonitorbot.py for editing.
 2. Enter your VK page ID.
 3. Enter your VK group token in the variable at the beginning of the script.
