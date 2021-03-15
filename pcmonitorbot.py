@@ -4,11 +4,14 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 import random
 import json
 import re
+import pyautogui
+import requests
+from pywinauto import Desktop
 
 # OpenHardwareMonitor
 w = wmi.WMI(namespace="root\OpenHardwareMonitor")
 # vk
-id_vk = ***token***
+id_vk = ***id***
 token = "***token***"
 vk_session = vk_api.VkApi(token=token)
 vk = vk_session.get_api()
@@ -36,6 +39,14 @@ keyboard = {
     [{
         "action": {
             "type": "text",
+            "payload": "{\"button\": \"3\"}",
+            "label": "Take Screenshot🖼",
+        },
+        "color": "secondary"
+    }],
+    [{
+        "action": {
+            "type": "text",
             "payload": "{\"button\": \"1\"}",
             "label": "Settings⚙"
         },
@@ -54,6 +65,14 @@ keyboard_settings = {
             "type": "text",
             "payload": "{\"button\": \"1\"}",
             "label": "Hardware🛠"
+        },
+        "color": "positive"
+    },
+    {
+        "action": {
+            "type": "text",
+            "payload": "{\"button\": \"1\"}",
+            "label": "About🔍"
         },
         "color": "positive"
     }],
@@ -77,7 +96,6 @@ keyboard_settings = str(keyboard_settings.decode('utf-8'))
 #  GpuAti
 #  HDD
 
-# dev
 def get_hw():
     hw_info = w.Hardware()
     hardw = {}
@@ -86,9 +104,6 @@ def get_hw():
         hw = hardware.Identifier.split('/')
         i = i + 1
         hardw.update({str(hw[1]) + str(i) : str(hardware.Name)})
-	# for hw in hw_info:
-	# 	if hw.HardwareType==str(hardware):
-	# 		hardw.update({hardware : str(hw.Name)})
     return hardw
 
 # I don't know how to describe it :)
@@ -132,6 +147,9 @@ def get_load():
             sens_values.update({sens[1] + str(i) : sensor.Value})
     return sens_values
 
+# windows = Desktop(backend="uia").windows()
+# print([w.window_text() for w in windows])
+
 # vk longpoll event
 for event in longpoll.listen():
     if event.type == VkEventType.MESSAGE_NEW:
@@ -148,12 +166,22 @@ for event in longpoll.listen():
                 sens_inf = get_load()
                 for sens in sens_inf.items():
                     vk.messages.send(user_id = id_vk, keyboard = keyboard, message = str(translate(sens[0][:-1])) + ': ' + str(int(sens[1])) + '%', random_id = random.randint(0, 999999))
+            elif msg == 'Take Screenshot🖼':
+                img = pyautogui.screenshot()
+                img.save('screenshot.png')
+                upload_url = vk.photos.getMessagesUploadServer()
+                upload_file = requests.post(upload_url['upload_url'], files={'photo': open('screenshot.png', 'rb')}).json()
+                c = vk.photos.saveMessagesPhoto(photo=upload_file['photo'], server=upload_file['server'], hash=upload_file['hash'])[0]
+                d = "photo{0}_{1}".format(c['owner_id'], c['id'])
+                vk.messages.send(user_id = id_vk, keyboard = keyboard, message = 'Screenshot:', attachment = d, random_id = random.randint(0, 999999))
             elif msg == 'Settings⚙':
                 vk.messages.send(user_id = id_vk, keyboard = keyboard_settings, message = 'You have gone to the settings section', random_id = random.randint(0, 999999))
             elif msg == 'Hardware🛠':
                 hardware = get_hw()
                 for hard in hardware.items():
                     vk.messages.send(user_id = id_vk, keyboard = keyboard, message = str(translate(hard[0][:-1])) + ': ' + str(hard[1]), random_id = random.randint(0, 999999))
+            elif msg == 'About🔍':
+                vk.messages.send(user_id = id_vk, keyboard = keyboard_settings, message = '> PCmonitorBot\n> A bot for monitoring the state of the PC.\n> Repository: https://github.com/anton-ovchinnikov/PCmonitorBot\n> Author: Anton Ovchinnikov', random_id = random.randint(0, 999999))
             elif msg == 'Back🔙':
                 vk.messages.send(user_id = id_vk, keyboard = keyboard, message = 'You have gone to the main section', random_id = random.randint(0, 999999))
             else:
